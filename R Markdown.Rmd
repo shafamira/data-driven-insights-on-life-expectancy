@@ -1,0 +1,343 @@
+# AOL Data Mining and Visualization (DTSC6005001)
+
+-   ALyza Rahima Pramudya - 2502032125
+-   Faishal Kamil - 2502001063
+-   Shafa Amira Qonitatin - 2502009173
+
+## About Dataset
+
+Our dataset is from the following link: <https://www.kaggle.com/datasets/kumarajarshi/life-expectancy-who> and more details about the dataset are described below:
+
+**Problem Statement:** The problem at hand is to perform Exploratory Data Analysis (EDA) and also perform predictive modeling on the Life Expectancy dataset. By analyzing the dataset, we aim to gain insight into the factors that influence life expectancy and understand the patterns and relationships in the data.
+
+**Objective:** The objective of this task is to perform EDA on the Life Expectancy dataset that can provide meaningful insights and visualizations so that we can create predictive modeling to predict Life Expectancy. The analysis should aim to answer questions such as:
+
+-   Are there any outliers or missing values in the dataset that need to be addressed?
+-   Are there any significant differences in life expectancy across countries or regions?
+-   Are there any trends or patterns in life expectancy over time?
+-   What are the factors influencing life expectancy?
+- Can a predictive model (Random Forest) be developed to accurately predict life expectancy?
+
+**Data Description:** This dataset contains information about various factors that may affect the life expectancy of individuals in different countries. The dataset includes the following features:
+
+-   Country: Name of the country
+-   Year: Year of observation
+-   Status: Development status of the country (Developed or Developing)
+-   Life expectancy: Life expectancy in age
+-   Adult mortality: Probability of dying between 15 and 60 years per 1000 population
+-   Infant deaths: Number of infant deaths per 1000 population
+-   Alcohol: Alcohol consumption per capita (in liters of pure alcohol)
+-   Percentage expenditure: Expenditure on healthcare as a percentage of GDP per capita
+-   Hepatitis B: Hepatitis B immunization coverage among 1-year-olds (in percentage)
+-   Measles: Number of reported measles cases per 1000 population
+-   BMI: Average Body Mass Index (BMI) of the population
+-   Under-five deaths: Number of deaths under the age of five per 1000 population
+-   Polio: Polio immunization coverage among 1-year-olds (in percentage)
+-   Total expenditure: Total government expenditure on health as a percentage of GDP
+-   Diphtheria: Diphtheria immunization coverage among 1-year-olds (in percentage)
+-   HIV/AIDS: Deaths per 1000 live births caused by HIV/AIDS
+-   GDP: Gross Domestic Product per capita (in USD)
+-   Population: Population of the country
+-   Thinness 1-19 years: Prevalence of thinness among children and adolescents aged 10-19 (in percentage)
+-   Thinness 5-9 years: Prevalence of thinness among children aged 5-9 (in percentage)
+-   Income composition of resources: Human Development Index (HDI) of income composition of resources
+-   Schooling: Number of years of schooling
+
+These features provide a wide range of variables that can be explored and analyzed to understand the factors influencing life expectancy.
+
+## 1) Understanding all variables
+
+In this section, we must first understand about each variable so that we understand more about the dataset we are analyzing.
+
+First, we import libraries that we will need
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(caTools)
+library(randomForest)
+```
+Then, we load the dataset and put it into the variable `df`
+
+```{r}
+df = read.csv("/Users/shafaqonitatingmail.com/Documents/Semester 4/Data Mining and Visualization/Life Expectancy Data.csv")
+```
+
+```{r}
+head(df)
+```
+
+From the above observation, we can see that this dataset is a periodic dataset, where for example in `Afghanistan` there are variable values (such as Status, Life.expectancy, Adult.Mortality, infant.deaths, and so on) that have different values every year
+
+```{r}
+str(df)
+```
+From the above output, we can see that the size of this dataset is 2938 obs. of 22 variables, this means we have 2983 rows and 22 columns to analyze and we know that this dataset contains almost numerical variables except `Country` and `Status` which are categorical variables
+
+```{r}
+summary(df)
+```
+
+In accordance with the previous explanation, where we all know that `Country` and `Status` are categorical variables so that when we run `summary()` it cannot display statistical information such as Min, 1st Qu, Median, Mean, 3rd Qu, and Max values so that the output is only the length, class, and mode, which the data size is 2938 and the data type is character.
+
+From the observation, we can see that there are null values in 14 variables out of 22 variables in the dataset, especially in numerical variables, namely in the variables Life.expectancy, Adult.Mortality, Alcohol, Hepatitis.B, BMI, Polio, Total.expenditure, Diphtheria, GDP, Population, thinness.1.19.years, thinness.5.9.years, Income.composition.of.resources, Schooling which we will handle in section `2) Data Cleaning`.
+
+## 2) Data Cleaning
+
+```{r}
+# counts the number of null values in each column
+null_counts <- colSums(is.na(df))
+
+# sort null_counts in descending order
+sorted_null_counts <- sort(null_counts, decreasing = TRUE)
+
+# display the sort result
+sorted_null_counts
+```
+In the null values detection above (which is actually the same as NAs' in the `summary` function), we sort where the variables that have the highest null-values are Population, Hepatitis.B, and GDP, then the next step we will handle the null-values.
+
+Now, we plot the number of null values in each variables.
+
+```{r}
+sorted_null_counts_df <- data.frame(variables = names(sorted_null_counts), counts = sorted_null_counts)
+```
+
+```{r}
+ggplot(data = sorted_null_counts_df, aes(x = reorder(variables, desc(counts)), y = counts)) +
+  geom_bar(stat = "identity", fill = "#5584AC", color = "#5584AC") +
+  labs(x = "Variables", y = "Counts", title = "Number of Null Values in Each Variables") +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1))
+```
+
+
+```{r}
+# calculate means of all the numeric variables
+df_num = df[, c("Year","Life.expectancy", "Adult.Mortality", "infant.deaths", "Alcohol", "percentage.expenditure", "Hepatitis.B", "Polio","Measles", "BMI", "under.five.deaths", "Total.expenditure", "Diphtheria", "HIV.AIDS", "GDP", "Population", "thinness..1.19.years", "thinness.5.9.years", "Income.composition.of.resources", "Schooling")]
+
+# calculate column means, excluding NA values
+means <- colMeans(df_num, na.rm = TRUE)
+means
+```
+In the above step, we include all numeric variables. Why not just variables that have null values? because this `df_num` will be scaled and used in section `4.) Predictive Modeling`. Before we impute NA values, we calculate the column means first, excluding NA values.
+
+```{r}
+# impute NA values with column means
+for(i in names(df_num)) {
+  df_num[is.na(df_num[, i]), i] <- means[i]
+}
+
+# assign the imputed values back to the original dataframe
+df[, names(df_num)] <- df_num
+
+# check for remaining NA values
+colSums(is.na(df))
+```
+
+From the above code, we are looping to impute the NA value with its column average and setting the imputed value back to `df`. Since we will use it in section `3) Analyzing and Visualization`, if we do the visualization before we handle the missing values, it may lead to misinterpretation of the pattern and there is also a warning if we do it anyway. So, make sure we have to handle the null values before we do the visualization so that this will ensure that subsequent insights and conclusions are based on the most accurate and complete data possible.
+
+And also why don't we do the visualization after the data is completely clean or in other words, where the data has already been scaled? This will change the scale so we decided to only handle the null values before doing the visualization so that the results are also not too much manipulated so that it can produce a more accurate visualization.
+
+```{r}
+# factorize categorical variables
+df$Status <- as.factor(df$Status)
+df$Country <- as.factor(df$Country)
+```
+
+We factorize categorical variables because it can provides a way to convert them into a suitable numeric representation, enabling statistical analysis, predictive modeling, and effective visualization of categorical data.
+
+```{r}
+Max <- apply(df_num, 2, max) 
+Min <- apply(df_num, 2, min)
+
+scaled <- as.data.frame(scale(df_num, center = Min, scale = Max - Min))
+head(scaled)
+
+```
+
+Now, we also scaled our dataset so it can have the similar units for each variables and we put in at `scaled`. Then, we combine the categorical variables and numerical variables and we put to `df_clean` that we will use in section `4.) Predictive Modeling`
+
+```{r}
+df_clean <- df %>% 
+  mutate(across(where(is.numeric), ~ scaled[[cur_column()]]))
+
+head(df_clean)
+```
+We also have to encode our categorical variable, which `Status` variable
+```{r}
+# encode the categorical variable
+df_clean$Status <- ifelse(df_clean$Status == "Developed", 1, 0)
+```
+
+And also change our categorical variable, which `Country` variable to numerical
+```{r}
+df_clean$Country <- as.numeric(df_clean$Country)
+```
+
+```{r}
+head(df_clean)
+```
+
+## 3) Analyzing and Visualization
+
+```{r}
+mean_countries <- df %>%
+  group_by(Country) %>%
+  summarise(mean_life_expectancy = mean(Life.expectancy), status = unique(Status)) %>%
+  arrange(desc(mean_life_expectancy))
+
+top_10_countries <- head(mean_countries, 10)
+
+ggplot(top_10_countries, aes(x = reorder(Country, mean_life_expectancy), y = mean_life_expectancy, fill = status)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = round(mean_life_expectancy, 3)), size = 3, color = "#142850") +
+  labs(x = "Country", y = "Mean Life Expectancy", fill = "Status") +
+  coord_flip() +
+  scale_fill_manual(values = c("lightblue", "#5584AC"), labels = c("Developed", "Developing")) +
+  theme(legend.position = "bottom")
+```
+
+From 2000-2015 Japan has the highest Life Expectancy accross the other countries and from the top 10 countries with the highest mean more are from developed countries compared to developing countries. This can be validated using the Point Biserial Correlation.
+
+```{r}
+cor.test(df_clean$Status, df_clean$Life.expectancy)
+```
+Based on this output, it can be concluded that there is a significant positive correlation between the variables "Status" and "Life.expectancy". Thus, status has a corresponding influence on life expectancy.
+
+Now, we want to see if Year has a correlation with Life Expectancy Rate
+
+```{r}
+grouped_data <- df %>% 
+  group_by(Country) %>%
+  select(Country, Year, Life.expectancy)
+
+head(grouped_data,50)
+```
+From the output above, it can be seen at a glance that in Country Afgahnistan there is an increase in the percentage of Life expectancy and likewise for Albania. To validate this argument, we conducted a Linear Regression to see the correlation between Year and Life Expectancy.
+
+```{r}
+reg_model <- lm(Life.expectancy ~ Year, data = df)
+summary(reg_model)
+```
+As per the output, we can see that the variables "Year" and "Life.expectancy" have a significant correlation, and the variable "Year" significantly affects the variable "Life.expectancy". This can be interpreted from the p-value given in the output, which is "<2e-16", which means it is far below the significance level of 0.05. 
+In addition, we can also see the regression coefficient for the variable "Year" which is 0.34954. This coefficient indicates that every one unit increase in the "Year" variable (i.e., one year), is expected to increase the life expectancy value by 0.34954.
+
+Now, we want to know what are the factors that affect Life Expectancy? The first step, because we want to calculate the correlation using Pearson Correlation, the variable must be numeric type
+
+```{r}
+df_clean_num <- df_clean[, sapply(df_clean, is.numeric)]
+```
+
+```{r}
+df_clean_num <- subset(df_clean_num, select = -c(Year))
+```
+
+Next, we will perform calculations to find the correlation value for each variable as in the beginning using the cor() function.
+```{r}
+cor_matrix <- cor(df_clean_num)
+print(cor_matrix)
+```
+
+Then we will do melting or convert the correlation matrix format into a long format using the reshape2 library so that it will produce a data frame with three columns, namely Var1, Var2, and value, where Var1 and Var2 represent the column names in the converted correlation matrix and value is the correlation value between Var1 and Var2. After that, we can confirm by using the head() function.
+
+```{r}
+corr_melted <- melt(cor(df_clean_num))
+head(corr_melted)
+```
+Now, we sort the data to see what variable has the highest correlation value with Life Expectancy 
+
+```{r}
+corr_mat <- cor(df_clean_num)[,"Life.expectancy"]
+corr_mat <- sort(corr_mat, decreasing = TRUE)
+
+head(as.data.frame(corr_mat), 10)
+```
+The correlation coefficient between "Life.expectancy" and "Schooling" is 0.7150663, indicating a strong positive correlation. This suggests that higher levels of schooling are associated with increased life expectancy.The correlation coefficient between "Life.expectancy" and "Income.composition.of.resources" is 0.6924828, indicating a strong positive correlation. This suggests that higher levels of income composition of resources are associated with increased life expectancy and so on.
+
+Now, we plot using heatmap to visualize the correlation values between the variable "Life.expectancy" and other variables
+
+```{r}
+corr_mat <- cor(df_clean_num)
+
+corr_melted <- melt(corr_mat)
+
+ggplot(corr_melted, aes(x = Var1, y = Var2, fill = value, label = round(value, 2))) +
+  geom_tile() +
+  geom_text(color = "white", size = 1.5) +
+  scale_fill_gradient2(low = "#DEFCF9", mid = "#5584AC", high = "#142850",
+                       name = "Pearson\nCorrelation") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.8, hjust = 1)) 
+```
+## 4) Predictive Modelling
+
+First step that we have to do is split our dataset. We will split df_clean with a split ratio of 80%:20%, where the train dataset is 80% of the total data in df_clean and the test dataset is the remaining 20% of the df_clean data.
+```{r}
+split = sample.split(df_clean$Life.expectancy, SplitRatio = 0.80)
+
+train <- subset(df_clean, split == TRUE)
+test <- subset(df_clean, split == FALSE)
+
+```
+
+Next, we create a formula for what columns will be fit to the model so that they are not written one by one. Where in this formula the dependent variable is Life.Expectancy and the independent variables are variables other than Life.Expectancy or we can see the output below:
+
+```{r}
+n <- names(train)
+n
+
+f <- as.formula(paste("Life.expectancy ~", paste(n[!n %in% "Life.expectancy"], collapse = " + ")))
+f
+```
+Loads the randomForest library into R and creates a random forest model using the randomForest() function, where the parameters are the formula above and the data to be trained.
+
+```{r}
+modelRF <- randomForest(f,data=train)
+print(modelRF)
+```
+The output shows the result of regression modeling using the Random Forest algorithm with 500 trees and 7 variables tried on each split (node). The model produces a Mean of squared residuals value of 0.001202557, indicating that on average, the model's predictions deviate from the actual values by this amount and % Var explained (percentage of variation explained by the model) of 96.36. Overall, the random forest model appears to have performed well, as it explains a high percentage of the variation in life expectancy and has a relatively low mean of squared residuals.
+
+Next, we will predict our model using the test dataset and store it in the predictedRF variable. Then, we will combine the predictedRF and ``test$Life.expectancy`` columns into one data frame, where predictedRF contains the predicted value generated by the model, while ``test$Life.expectancy`` contains the actual value of the response variable. Then we will name it "Predicted Value" for the prediction and "Ground Truth" for the actual value.
+
+```{r}
+predictedRF <- predict(modelRF,test)
+resultsRF <- cbind(predictedRF,test$Life.expectancy) 
+colnames(resultsRF) <- c('Predicted Value','Ground Truth')
+resultsRF <- as.data.frame(resultsRF)
+resultsRF
+```
+
+Next, we will plot between the predicted value (x-axis) and the ground truth (y-axis) using a scatter plot
+
+```{r}
+#create a scatter plot between the predicted value (x-axis) and the true value (y-axis)
+plotRF <- ggplot(resultsRF,aes(x=resultsRF$`Predicted Value`,y=resultsRF$`Ground Truth`)) + geom_point() + stat_smooth() + xlab("Predicted Value") + ylab("Ground Truth")
+plotRF
+```
+From the plot, we can see the distribution of data on the predicted value and ground truth and the line from our random forest model. It can be seen that the distribution of the points is close to the trend line (blue line) so this can be an indication of the good performance of the random forest model in predicting the target value.
+
+A linear pattern like the output above can also be assumed that there is a significant correlation between the predicted value and the ground truth and the random forest model has good performance.
+
+This can also be proven by calculating the Mean Square Error with the code below
+
+```{r}
+#calculate Mean Squared Error
+MSE_RF <- sum((resultsRF$`Predicted Value` - resultsRF$`Ground Truth`)^2)/nrow(test)
+MSE_RF
+```
+
+The Mean Squared Error result of 0.0009394606 shows that the random forest model that has been made has a good ability to predict the value of Life expectancy. The lower the MSE value, the smaller the difference between the actual value and the predicted value, so it can be concluded that the model has a high level of accuracy in predicting the value of Life expectancy.
+
+Importance() function will calculate the importance score of independent variables in our model, this score measures how often each variable is used in the formation of decisions by each variable
+
+```{r}
+# importance of each predictor
+importance(modelRF) 
+```
+In this context, the higher the "IncNodePurity" value of a feature, the more important it is in explaining variations in the data and influencing the prediction results. Features with higher "IncNodePurity" values are considered to have a greater contribution to the model. We can see from the output above, where the variables with thw highest "IncNodePurity" is HIV.AIDS
+
+To make it easier to see, we plot our modelRF using VarImPlot function()
+
+```{r}
+varImpPlot(modelRF)
+```
+From the output above, it can be seen that the "HIV.AIDS" feature has a very high "IncNodePurity" value, which is 21.1817738. This indicates that the "HIV.AIDS" feature is very important in predicting the value of the target or dependent variable.
