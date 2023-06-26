@@ -14,7 +14,7 @@ The analysis aims to answer the following questions:
 The objective of this project is to perform Exploratory Data Analysis (EDA) on the Life Expectancy dataset, generating meaningful insights and visualizations. Additionally, a predictive model using Random Forest will be developed to accurately predict life expectancy.
 
 ## Files
-- [**Report.pdf:**](Poster.pdf) This file contains a poster-style report summarizing the project, including key findings and visualizations.
+- [**Poster.pdf:**](Poster.pdf) This file contains a poster-style report summarizing the project, including key findings and visualizations.
 - [**R Markdown.Rmd:**](https://github.com/shafamira/data-driven-insights-on-life-expectancy/blob/d0cb555fe1da074168f57cb60ea18bc8a0f9a196/R%20Markdown.Rmd) This R Markdown file contains the source code used for the project.
 - [**Report.html:** ](Report.html) This HTML file is a converted version of the [R Markdown.Rmd](https://github.com/shafamira/data-driven-insights-on-life-expectancy/blob/d0cb555fe1da074168f57cb60ea18bc8a0f9a196/R%20Markdown.Rmd) file, providing an interactive report with code and visualizations.
 
